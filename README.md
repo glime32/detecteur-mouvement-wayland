@@ -1,38 +1,35 @@
-# detecteur-mouvement-wayland
+<p align="center"><img src="docs/banner-detecteur-mouvement-wayland.png" alt="detecteur-mouvement-wayland" width="100%"></p>
 
-Surveille une zone de l'écran et entoure en rouge ce qui bouge dedans, en direct, sous KDE Plasma 6 / Wayland.
+<p align="center"><img src="https://img.shields.io/badge/platform-KDE%20Plasma%206%20·%20Wayland-000000?style=flat-square" alt="platform"> <img src="https://img.shields.io/badge/python-3-3776ab?style=flat-square" alt="python"> <img src="https://img.shields.io/badge/Qt-PyQt6-41cd52?style=flat-square" alt="Qt"> <img src="https://img.shields.io/badge/license-MIT-610089?style=flat-square" alt="license"></p>
 
-C'est surtout un exercice pour apprendre à capturer l'écran proprement sous Wayland en Python, en faisant attention à la batterie. Les outils classiques (`mss`, `pyautogui`...) ne marchent que sous X11 : sous Wayland ils ne voient qu'une image noire.
+<p align="center"><a href="README.fr.md">🇫🇷 Version française</a></p>
 
-## Fonctionnement
+**Watches an area of your screen and outlines whatever moves inside it, live — on Wayland.**
 
-- **Capture** : portail XDG `ScreenCast` + flux PipeWire lu avec GStreamer. KDE demande quel écran partager au premier lancement, puis le choix est retenu (`restore_token`).
-- **Détection** : différence entre deux images, sur une version réduite de la zone (~160 px de large, canal vert seulement), découpée en cases de 8 px. Les cases voisines qui bougent sont regroupées en rectangles.
-- **Affichage** : une fenêtre PyQt6 transparente plein écran, au-dessus de tout, que les clics traversent. Cadre violet autour de la zone, rectangles rouges sur le mouvement.
-- **Raccourci global** Meta+Alt+Z via le portail `GlobalShortcuts`, icône dans la zone de notification (clic = nouvelle zone, clic droit = pause / quitter).
+Mostly an exercise in capturing the screen *properly* under Wayland from Python, while keeping battery use minimal. Classic tools (`mss`, `pyautogui`…) only work on X11; on Wayland they just see a black image.
 
-## Économie de batterie
+<p align="center"><img src="docs/detecteur-schema.png" width="100%" alt="pipeline"></p>
 
-- KWin n'envoie une image que quand l'écran change, max 8 par seconde : écran figé = script qui dort ;
-- curseur exclu de la capture ;
-- aucune minuterie qui tourne en boucle ;
-- en pause, le flux est coupé côté KWin ;
-- les rectangles dessinés par l'overlay sont masqués de l'analyse, sinon il se détecterait lui-même.
+## How it works
 
-## Installation
+- **Capture**: XDG `ScreenCast` portal + PipeWire stream read with GStreamer. KDE asks which screen to share the first time, then remembers it (`restore_token`).
+- **Detection**: difference between two frames on a downscaled copy of the area (~160 px wide, green channel only), split into 8 px cells; neighbouring moving cells are merged into rectangles.
+- **Overlay**: a transparent, always-on-top, click-through PyQt6 window. Purple frame around the area, red boxes on motion.
+- **Global shortcut** Meta+Alt+Z via the `GlobalShortcuts` portal, plus a tray icon (click = new area, right-click = pause / quit).
 
-Avec le Python du système (pas un venv, sinon `gi` est introuvable) :
+## Battery
+
+- KWin only sends a frame when the screen changes, max 8/s — a still screen means the script sleeps;
+- cursor excluded from capture; no polling timers; stream paused on KWin's side when you pause;
+- the overlay's own rectangles are masked out of the analysis.
+
+## Run
 
 ```bash
 sudo pacman -S --needed python-pyqt6 python-numpy python-gobject \
     gst-plugins-base gst-plugins-good gst-plugin-pipewire xdg-desktop-portal-kde
-python detecteur.py
+python detecteur.py            # draw the area with the mouse, Esc to cancel
+python detecteur.py --zone     # pick a new area from another terminal
 ```
 
-Ensuite : l'écran s'assombrit, on trace la zone à la souris (Échap pour annuler). `python detecteur.py --zone` depuis un autre terminal pour en tracer une nouvelle. Ctrl+C pour quitter.
-
-Réglages (`FPS_MAX`, `SEUIL_PIXEL`, `SEUIL_CASE`...) en haut du fichier.
-
-## Limite
-
-KWin envoie une image dès que quelque chose change n'importe où sur l'écran, pas seulement dans la zone. Une vidéo ailleurs réveille donc le script jusqu'à 8 fois par seconde (ça reste léger). Baisser `FPS_MAX` si besoin.
+Use the system Python (not a venv), otherwise `gi` isn't found.
